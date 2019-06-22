@@ -186,7 +186,7 @@ kubectl create ns dev-app
 ```
 
 ```
-## Created Redis master and slave:
+## Creating Redis master and slave:
 
 kubectl apply -f guestbook/redis-master-deployment.yaml
 kubectl apply -f guestbook/redis-master-service.yaml
@@ -237,6 +237,101 @@ helm init --service-account tiller --upgrade
 Client: &version.Version{SemVer:"v2.12.3", GitCommit:"eecf22f77df5f65c823aacd2dbd30ae6c65f186e", GitTreeState:"clean"}
 Server: &version.Version{SemVer:"v2.12.3", GitCommit:"eecf22f77df5f65c823aacd2dbd30ae6c65f186e", GitTreeState:"clean"}
 ```
+
+
+### Setup and configure Prometheus and Grafana
+
+```
+Create namespace for the monitoring tool
+kubect create ns monitoring
+```
+```
+## Create helm service account
+kubectl apply -f helm-rbac.yaml
+helm init --service-account helm 
+```
+
+```
+Installing Prometheus and Grafana using helm
+helm install --name kube-prometheus prometheus-grafana/helm/prometheus -f prometheus-grafana/values.yaml --namespace monitoring
+helm install --name kube-grafana prometheus-grafana/helm/grafana -f prometheus-grafana/values.yaml --namespace monitoring
+```
+
+```
+## Adding nginx configuration to make grafana accessible via loadbalancer
+
+    upstream stream_backend2 {
+        least_conn;
+        # REPLACE WITH master0 IP
+        server 10.138.0.14:30000;
+    }
+    
+    server {
+        listen        3000;
+        proxy_pass    stream_backend2;
+        proxy_timeout 3s;
+        proxy_connect_timeout 1s;
+    }
+```
+```
+[root@k8s-master1 prometheus-grafana]# kubectl get pods -n monitoring
+NAME                                     READY   STATUS    RESTARTS   AGE
+alertmanager-7b6496fcf4-xt8rz            1/1     Running   1          18h
+grafana-774446fd6c-7qk7f                 2/2     Running   16         18h
+node-exporter-gxldt                      1/1     Running   2          17h
+node-exporter-lgnd7                      1/1     Running   5          2d12h
+prometheus-deployment-5644588bfd-v2j25   1/1     Running   1          18h
+
+[root@k8s-master1 k8s-demo]# kubectl get service -n monitoring
+NAME             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+alertmanager     ClusterIP   10.101.128.196   <none>        9093/TCP         2d12h
+grafana          NodePort    10.104.181.100   <none>        3000:30000/TCP   2d11h
+prometheus-svc   ClusterIP   10.97.218.155    <none>        9090/TCP         2d12h
+
+```
+
+### Setup log analysis using Elasticsearch, Fluentd, Kibana
+
+```
+$ kubectl create -f fluentd-elasticsearch/es-statefulset.yaml
+$ kubectl create -f fluentd-elasticsearch/es-service.yaml
+$ kubectl create -f fluentd-elasticsearch/fluentd-es-configmap.yaml
+$ kubectl create -f fluentd-elasticsearch/fluentd-es-ds.yaml
+$ kubectl create -f fluentd-elasticsearch/kibana-deployment.yaml
+$ kubectl create -f fluentd-elasticsearch/kibana-service.yaml
+```
+```
+## Adding nginx configuration to make kibana accessible via loadbalancer
+
+    upstream stream_backend3 {
+        least_conn;
+        # REPLACE WITH master0 IP
+        server 10.138.0.14:30010;
+    }
+    
+    server {
+        listen        5601;
+        proxy_pass    stream_backend3;
+        proxy_timeout 3s;
+        proxy_connect_timeout 1s;
+    }
+```    
+```
+[root@k8s-master1 fluentd-elasticsearch]# kubectl get pods -n kube-system | grep elasticsearch
+elasticsearch-logging-0               1/1     Running   2          17h
+elasticsearch-logging-1               1/1     Running   1          17h
+[root@k8s-master1 fluentd-elasticsearch]# kubectl get pods -n kube-system | grep fluentd
+fluentd-es-v2.5.2-67ck9               1/1     Running   3          17h
+fluentd-es-v2.5.2-dcqlh               1/1     Running   1          17h
+[root@k8s-master1 fluentd-elasticsearch]# kubectl get pods -n kube-system | grep kibana
+kibana-logging-f4d99b69f-5pw8p        1/1     Running   1          18h
+
+kubectl get service -n kube-system | grep -v "kube-dns\|prometheus-operator-kubelet\|tiller-deploy"
+NAME                          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                  AGE
+elasticsearch-logging         ClusterIP   10.107.107.81    <none>        9200/TCP                 18h
+kibana-logging                NodePort    10.100.132.187   <none>        5601:30010/TCP           18h
+```
+
 
 
 
