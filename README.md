@@ -242,7 +242,7 @@ Server: &version.Version{SemVer:"v2.12.3", GitCommit:"eecf22f77df5f65c823aacd2db
 ### Setup and configure Prometheus and Grafana
 
 ```
-Create namespace for the monitoring tool
+# Creating namespace for the monitoring tool
 kubect create ns monitoring
 ```
 ```
@@ -337,7 +337,7 @@ kibana-logging                NodePort    10.100.132.187   <none>        5601:30
 ### Blue/Green Deplyment
 
 ```
-Create namespace for the monitoring tool
+# Creating a namespace for the blue green deployment
 kubect create ns monitoring
 ```
 ```
@@ -391,7 +391,7 @@ nginx   LoadBalancer   10.107.51.64   <pending>     80:31349/TCP   92s
 ### Canary Deplyment
 
 ```
-Create namespace for the monitoring tool
+# Creating a namespace for the canary deployment
 kubect create ns canary-deployment
 ```
 
@@ -446,4 +446,15 @@ hello   ClusterIP   10.110.180.80   <none>        80/TCP    11s
 {"version":"2.0.0"}
 
 ```
+
+### Helm to deploy the application on Kubernetes Cluster from CI server
+
+```
+# We can use this jenkins pipeline structure for acheiving CI/CD using helm , for deploying the application application
+
+[Jenkinsfile](https://github.com/mhdramzeen/k8s-demo/blob/master/Jenkinsfile/)
+```
+
+
+
 
