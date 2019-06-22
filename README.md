@@ -452,9 +452,5 @@ hello   ClusterIP   10.110.180.80   <none>        80/TCP    11s
 ```
 # We can use this jenkins pipeline structure for acheiving CI/CD using helm , for deploying the application application
 
-[Jenkinsfile](https://github.com/mhdramzeen/k8s-demo/blob/master/Jenkinsfile/)
+[Jenkinsfile](https://github.com/mhdramzeen/k8s-demo/blob/master/Jenkinsfile)
 ```
-
-
-
-
