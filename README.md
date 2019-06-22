@@ -293,12 +293,13 @@ prometheus-svc   ClusterIP   10.97.218.155    <none>        9090/TCP         2d1
 ### Setup log analysis using Elasticsearch, Fluentd, Kibana
 
 ```
-$ kubectl create -f fluentd-elasticsearch/es-statefulset.yaml
-$ kubectl create -f fluentd-elasticsearch/es-service.yaml
-$ kubectl create -f fluentd-elasticsearch/fluentd-es-configmap.yaml
-$ kubectl create -f fluentd-elasticsearch/fluentd-es-ds.yaml
-$ kubectl create -f fluentd-elasticsearch/kibana-deployment.yaml
-$ kubectl create -f fluentd-elasticsearch/kibana-service.yaml
+## Installing Elastisearch, fluentd and Kibana 
+kubectl create -f fluentd-elasticsearch/es-statefulset.yaml
+kubectl create -f fluentd-elasticsearch/es-service.yaml
+kubectl create -f fluentd-elasticsearch/fluentd-es-configmap.yaml
+kubectl create -f fluentd-elasticsearch/fluentd-es-ds.yaml
+kubectl create -f fluentd-elasticsearch/kibana-deployment.yaml
+kubectl create -f fluentd-elasticsearch/kibana-service.yaml
 ```
 ```
 ## Adding nginx configuration to make kibana accessible via loadbalancer
