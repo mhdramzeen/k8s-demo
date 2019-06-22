@@ -334,6 +334,60 @@ kibana-logging                NodePort    10.100.132.187   <none>        5601:30
 ```
 
 
+### Blue/Green Deplyment
+
+```
+Create namespace for the monitoring tool
+kubect create ns monitoring
+```
+```
+# Creating blue deployment
+kubectl apply -f blue-green-deployment/blue.yaml -n blue-green-deployment
+
+[root@k8s-master1 k8s-demo]# kubectl get pods -n blue-green-deployment
+NAME                          READY   STATUS    RESTARTS   AGE
+nginx-1.10-547948f549-26r5v   1/1     Running   0          20s
+nginx-1.10-547948f549-f52br   1/1     Running   0          20s
+nginx-1.10-547948f549-gq2tg   1/1     Running   0          20s
+
+# Creating service for blue deployment:
+
+k apply -f blue-green-deployment/blue-service.yaml -n blue-green-deployment
+
+[root@k8s-master1 k8s-demo]# kubectl get svc -n blue-green-deployment
+NAME    TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+nginx   LoadBalancer   10.107.51.64   <pending>     80:31349/TCP   11s
+
+
+[root@k8s-master1 k8s-demo]# curl -s http://10.107.51.64/version | grep nginx
+<hr><center>nginx/1.10.3</center>
+```
+
+```
+# Creating green deployment, but service is still pointing to blue deployment:
+kubectl apply -f blue-green-deployment/green.yaml -n blue-green-deployment
+
+[root@k8s-master1 k8s-demo]# kubectl get pods -n blue-green-deployment
+NAME                          READY   STATUS    RESTARTS   AGE
+nginx-1.10-547948f549-26r5v   1/1     Running   0          112s
+nginx-1.10-547948f549-f52br   1/1     Running   0          112s
+nginx-1.10-547948f549-gq2tg   1/1     Running   0          112s
+nginx-1.11-848b9b487-2k4xw    1/1     Running   0          11s
+nginx-1.11-848b9b487-pmhw5    1/1     Running   0          11s
+nginx-1.11-848b9b487-v5tdt    1/1     Running   0          11s
+
+# Updating the service, now it will point to green:
+
+kubectl apply -f green-blue-green-deployment/service.yaml -n blue-green-deployment
+
+[root@k8s-master1 k8s-demo]# kubectl get svc -n blue-green-deployment
+NAME    TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+nginx   LoadBalancer   10.107.51.64   <pending>     80:31349/TCP   92s
+
+[root@k8s-master1 k8s-demo]# curl -s http://10.107.51.64/version | grep nginx
+<hr><center>nginx/1.11.13</center>
+```
+
 
 
 
