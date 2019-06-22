@@ -37,6 +37,154 @@ Load new parameters:
 sysctl --system
 ```
 
+Install Docker on all hosts
+
+```
+# Install Docker CE
+## Set up the repository
+### Install required packages.
+yum install yum-utils device-mapper-persistent-data lvm2
+
+### Add Docker repository.
+yum-config-manager \
+  --add-repo \
+  https://download.docker.com/linux/centos/docker-ce.repo
+
+## Install Docker CE.
+yum update && yum install docker-ce-18.06.3.ce
+systemctl enable docker
+systemctl start docker
+```
+
+Install kubeadm, kubelet and kubectl on masters/nodes:
+
+```
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kube*
+EOF
+
+# Set SELinux in permissive mode (effectively disabling it)
+setenforce 0
+sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+systemctl enable kubelet
+```
+```
+[root@k8s-master1 ramzeen_mhd]# kubelet --version && kubeadm version &&  kubectl version
+Kubernetes v1.14.3
+kubeadm version: &version.Info{Major:"1", Minor:"14", GitVersion:"v1.14.3", GitCommit:"5e53fd6bc17c0dec8434817e69b04a25d8ae0ff0", GitTreeState:"clean", BuildDate:"2019-06-06T01:41:54Z", GoVersion:"go1.12.5", Compiler:"gc", Platform:"linux/amd64"}
+Client Version: version.Info{Major:"1", Minor:"14", GitVersion:"v1.14.3", GitCommit:"5e53fd6bc17c0dec8434817e69b04a25d8ae0ff0", GitTreeState:"clean", BuildDate:"2019-06-06T01:44:30Z", GoVersion:"go1.12.5", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"14", GitVersion:"v1.14.3", GitCommit:"5e53fd6bc17c0dec8434817e69b04a25d8ae0ff0", GitTreeState:"clean", BuildDate:"2019-06-06T01:36:19Z", GoVersion:"go1.12.5", Compiler:"gc", Platform:"linux/amd64"}
+```
+
+Setting up a Nginx Loadbalancer:
+
+```
+## Creating a directory
+mkdir /etc/nginx
+```
+```
+## Adding and editing nginx configuration file /etc/nginx/nginx.conf
+
+events { }
+
+stream {
+    upstream stream_backend {
+        least_conn;
+        # REPLACE WITH master0 IP
+        server 10.138.0.14:6443;
+        # REPLACE WITH master1 IP
+        server 10.138.0.15:6443;
+        # REPLACE WITH master2 IP
+        server 10.138.0.16:6443;
+    }
+
+    server {
+        listen        6443;
+        proxy_pass    stream_backend;
+        proxy_timeout 3s;
+        proxy_connect_timeout 1s;
+    }
+}
+```
+```
+## Starting Nginx
+
+docker run --name proxy \
+    -v /etc/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+    -p 6443:6443 \
+    -d nginx
+``` 
+
+Initialize cluster on first master:
+
+```
+Create kubeadm YAML configuration file. Let’s call it kubeadm.yml:
+
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
+kubernetesVersion: stable
+apiServer:
+  certSANs:
+  - "10.138.0.17"
+controlPlaneEndpoint: "10.138.0.17:6443"
+
+kubeadm init --config=kubeadm.yml
+```
+
+Copy the certificate and deploy in other masters:
+
+```
+tar zcvf k8scerts.tar.gz /etc/kubernetes/admin.conf /etc/kubernetes/pki/ca.crt /etc/kubernetes/pki/ca.key /etc/kubernetes/pki/sa.key /etc/kubernetes/pki/sa.pub /etc/kubernetes/pki/front-proxy-ca.crt /etc/kubernetes/pki/front-proxy-ca.key /etc/kubernetes/pki/etcd/ca.crt /etc/kubernetes/pki/etcd/ca.key
+
+tar xvf k8scerts.tar.gz -C /
+```
+
+Join the other masters to the cluster using kubeadm:
+
+```
+kubeadm join 10.138.0.17:6443 --token 0f8hnw.ovzrn846yu51s9f4 \
+    --discovery-token-ca-cert-hash sha256:633a5eef17da872379329c7c2bf593cb9df5f1e2b19cf298c9a78180f2ac145a \
+    --experimental-control-plane
+```
+
+Join the nodes to the cluster using kubeadm:
+```
+kubeadm join 10.138.0.17:6443 --token 0f8hnw.ovzrn846yu51s9f4 \
+    --discovery-token-ca-cert-hash sha256:633a5eef17da872379329c7c2bf593cb9df5f1e2b19cf298c9a78180f2ac145a
+```
+
+```
+[root@k8s-master1 ramzeen_mhd]# kubectl get nodes
+NAME          STATUS   ROLES    AGE     VERSION
+k8s-master1   Ready    master   4d13h   v1.14.3
+k8s-master2   Ready    master   4d12h   v1.14.3
+k8s-master3   Ready    master   4d12h   v1.14.3
+k8s-node      Ready    <none>   3d15h   v1.14.3
+k8s-node2     Ready    <none>   17h     v1.14.3
+
+[root@k8s-master1 ramzeen_mhd]# kubectl get pods -n kube-system | grep apiserver
+kube-apiserver-k8s-master1            1/1     Running   28         4d13h
+kube-apiserver-k8s-master2            1/1     Running   6          4d12h
+kube-apiserver-k8s-master3            1/1     Running   7          4d12h
+```
+
+
+
+
+
+
+
+
+
 
 
 
