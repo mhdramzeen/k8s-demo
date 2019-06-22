@@ -447,9 +447,3 @@ hello   ClusterIP   10.110.180.80   <none>        80/TCP    11s
 
 ```
 
-
-
-
-
-
-
