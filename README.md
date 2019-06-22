@@ -1,7 +1,7 @@
 # k8s-demo
 
 
-### Highly available Kubernetes cluster manually using Google Compute Engines:
+### Highly available Kubernetes cluster setup manually using Google Compute Engines:
 
 First we configure hostnames for all members of cluster. Those will be k8s-master1, k8s-master2 and k8s-master3 for our masters and k8s-node and k8s-node2 for nodes:
 ```
@@ -178,6 +178,65 @@ kube-apiserver-k8s-master3            1/1     Running   7          4d12h
 ```
 
 
+### Deploy guest-book application
+
+```
+## Creating a namespace for deploying app:
+kubectl create ns dev-app
+```
+
+```
+## Created Redis master and slave:
+
+kubectl apply -f guestbook/redis-master-deployment.yaml
+kubectl apply -f guestbook/redis-master-service.yaml
+kubectl apply -f guestbook/redis-slave-deployment.yaml
+kubectl apply -f guestbook/redis-slave-service.yaml
+
+## Creating frontend
+kubectl apply -f guestbook/frontend-deployment.yaml
+kubectl apply -f guestbook/frontend-service.yaml
+```
+
+```
+[root@k8s-master1 k8s-demo]# kubectl get pods -n dev-app
+NAME                           READY   STATUS    RESTARTS   AGE
+frontend-69859f6796-2gwzc      1/1     Running   2          17h
+frontend-69859f6796-ph5vn      1/1     Running   1          17h
+frontend-69859f6796-qztv7      1/1     Running   2          17h
+redis-master-596696dd4-ghvmh   1/1     Running   1          17h
+redis-slave-6bb9896d48-gtq64   1/1     Running   1          17h
+redis-slave-6bb9896d48-rdk5f   1/1     Running   1          17h
+
+[root@k8s-master1 k8s-demo]# kubectl get service -n dev-app
+NAME           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+frontend       NodePort    10.107.14.244   <none>        80:31831/TCP   3d15h
+redis-master   ClusterIP   10.104.231.58   <none>        6379/TCP       3d15h
+redis-slave    ClusterIP   10.100.144.20   <none>        6379/TCP       3d15h
+```
+
+### Install and configure Helm in Kubernetes
+
+Download and extracted https://github.com/helm/helm/releases/tag/v2.12.3
+```
+Unpack it (helm-v2.12.3-linux-amd64.tar.gz)
+mv linux-amd64/helm /usr/local/bin/helm
+PATH=$PATH:/usr/local/bin
+Run 'helm init' to configure helm.
+
+## Create the tiller serviceaccount:
+
+kubectl create serviceaccount --namespace kube-system tiller
+kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
+helm init --service-account tiller --upgrade
+```
+
+```
+[root@k8s-master1 ~]# helm version
+Client: &version.Version{SemVer:"v2.12.3", GitCommit:"eecf22f77df5f65c823aacd2dbd30ae6c65f186e", GitTreeState:"clean"}
+Server: &version.Version{SemVer:"v2.12.3", GitCommit:"eecf22f77df5f65c823aacd2dbd30ae6c65f186e", GitTreeState:"clean"}
+```
 
 
 
