@@ -351,14 +351,13 @@ nginx-1.10-547948f549-f52br   1/1     Running   0          20s
 nginx-1.10-547948f549-gq2tg   1/1     Running   0          20s
 
 # Creating service for blue deployment:
-
 k apply -f blue-green-deployment/blue-service.yaml -n blue-green-deployment
 
 [root@k8s-master1 k8s-demo]# kubectl get svc -n blue-green-deployment
 NAME    TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
 nginx   LoadBalancer   10.107.51.64   <pending>     80:31349/TCP   11s
 
-
+# Testing the nginx service to check the version:
 [root@k8s-master1 k8s-demo]# curl -s http://10.107.51.64/version | grep nginx
 <hr><center>nginx/1.10.3</center>
 ```
@@ -384,17 +383,69 @@ kubectl apply -f green-blue-green-deployment/service.yaml -n blue-green-deployme
 NAME    TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
 nginx   LoadBalancer   10.107.51.64   <pending>     80:31349/TCP   92s
 
+# New version of nginx is serving traffic
 [root@k8s-master1 k8s-demo]# curl -s http://10.107.51.64/version | grep nginx
 <hr><center>nginx/1.11.13</center>
 ```
 
+### Canary Deplyment
 
+```
+Create namespace for the monitoring tool
+kubect create ns canary-deployment
+```
 
+```
+# Creating canary deployment
+kubectl apply -f canary-deployment/hello.yaml -n canary-deployment
+kubectl apply -f canary-deployment/hello-canary.yaml -n canary-deployment
 
+# Two deployments, hello and hello-canary:
+[root@k8s-master1 k8s-demo]# kubectl get deployment -n canary-deployment
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+hello          3/3     3            3           17m
+hello-canary   1/1     1            1           9m33s
 
+[root@k8s-master1 k8s-demo]# kubectl get pods -n canary-deployment
+NAME                            READY   STATUS    RESTARTS   AGE
+hello-56ff65f9bf-b2w8m          1/1     Running   0          11m
+hello-56ff65f9bf-w4n5g          1/1     Running   0          11m
+hello-56ff65f9bf-w54cj          1/1     Running   0          8m
+hello-canary-6c8f9cc6fd-rz4w4   1/1     Running   0          31s
 
+# Adding hello servic which match in both the deployment
 
+[root@k8s-master1 k8s-demo]# kubectl get svc -n canary-deployment
+NAME    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+hello   ClusterIP   10.110.180.80   <none>        80/TCP    11s
+[root@k8s-master1 k8s-demo]# while true; do curl -ks https://10.110.180.80/version; sleep 1; done
 
+# Please see the ratio of requests server by the deployments:
+[root@k8s-master1 k8s-demo]# while true; do curl -ks http://10.110.180.80/version; sleep 1; done
+{"version":"1.0.0"}
+{"version":"2.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"2.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"2.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"2.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"1.0.0"}
+{"version":"2.0.0"}
+
+```
 
 
 
