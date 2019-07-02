@@ -140,6 +140,12 @@ controlPlaneEndpoint: "10.138.0.17:6443"
 kubeadm init --config=kubeadm.yml
 ```
 
+Deploy overlay network
+
+```
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+```
+
 Copy the certificate and deploy in other masters:
 
 ```
