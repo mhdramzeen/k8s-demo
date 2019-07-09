@@ -1,4 +1,4 @@
-[k8s-masters-init]
+[k8s-master-init]
 k8s-master1 ansible_ssh_host=10.138.0.14
 
 [k8s-masters]
