@@ -47,4 +47,4 @@ Change directory k8s-demo/wrapper-script/k8s-ansible and run the following ansib
 
 ```
 
-Note : We can also run the terraform/ansible in a single script, like fetching the hostname from the terraform output and passing to the ansible inventory yaml.
+Note : We can also run the terraform/ansible in a single script, like fetching the hostname from the terraform using a function and passing to the ansible inventory yaml.
