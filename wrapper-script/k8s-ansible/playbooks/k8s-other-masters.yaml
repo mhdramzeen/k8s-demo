@@ -1,4 +1,4 @@
-- hosts: new-k8s-masters
+- hosts: k8s-masters
   become: yes
   roles:
     - k8s-other-masters 
