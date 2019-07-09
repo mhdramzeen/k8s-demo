@@ -1,0 +1,4 @@
+- import_playbook: k8s-common.yaml 
+- import_playbook: k8s-init-first-master.yaml
+- import_playbook: k8s-other-masters.yaml
+- import_playbook: k8s-join-node.yaml

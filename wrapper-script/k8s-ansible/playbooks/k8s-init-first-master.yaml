@@ -1,0 +1,4 @@
+- hosts: k8s-master-init
+  become: yes
+  roles:
+    - k8s-init-first-master 

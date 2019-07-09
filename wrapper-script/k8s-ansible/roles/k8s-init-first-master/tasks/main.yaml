@@ -1,0 +1,56 @@
+- hosts: master
+  become: yes
+  tasks:
+    - name: initialize the cluster
+      shell: kubeadm init --config=/tmp/kubeadm-ha/kubeadm.yml >> cluster_initialized.txt
+      args:
+        chdir: $HOME
+        creates: cluster_initialized.txt
+
+    - name: create .kube directory
+      become: yes
+      become_user: centos
+      file:
+        path: $HOME/.kube
+        state: directory
+        mode: 0755
+
+    - name: copy admin.conf to user's kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/centos/.kube/config
+        remote_src: yes
+        owner: centos
+
+    - name: install Pod network
+      become: yes
+      become_user: centos
+      shell: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')" >> pod_network_setup.txt
+      args:
+        chdir: $HOME
+        creates: pod_network_setup.txt
+    - name: Copy admin.conf to /tmp/kubeadm-ha/config
+     copy:
+       src: /etc/kubernetes/admin.conf
+       dest: "/tmp/kubeadm-ha/config"
+       remote_src: yes
+
+    - name: "Fetching {{item}} from master0"
+      fetch:
+        src: /etc/kubernetes/pki/{{item}}
+        dest: /tmp/pki/{{item}}
+        flat: yes
+      with_items:
+         - ca.crt
+         - ca.key
+         - sa.key
+         - sa.pub
+         - front-proxy-ca.crt
+         - front-proxy-ca.key
+    - name: "copy {{item}} to other masters"
+      copy:
+        src: "/tmp/etcd/{{item}}"
+        dest: "/etc/kubernetes/pki/etcd/{{item}}"
+      with_items:
+          - ca.crt 
+          - ca.key
